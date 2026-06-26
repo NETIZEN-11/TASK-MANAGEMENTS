@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+  FIX BUG-M10: Removed 'unsafe-inline' from script-src — script-src is now 'self' only,
+  which defends against stored XSS escalation. Vite emits nonced inline scripts in
+  production builds so this still works for the entry chunk.
+
+  Vercel live feedback widget is excluded here (CSP is stricter than the widget
+  allows); enable it explicitly per environment if needed via build-time replacement.
+
+  NOTE: 'frame-ancestors' is intentionally NOT in this meta CSP — the CSP spec
+  (https://www.w3.org/TR/CSP3/#meta-element) specifies that 'frame-ancestors' is
+  IGNORED when delivered via <meta>. It is set on the backend via the
+  helmet contentSecurityPolicy HTTP header instead, where it IS honored.
+
+  'connect-src' includes 'http:' so dev calls to http://localhost:5001 work.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' http: https: ws: wss:; font-src 'self' data: https:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" />
+    <meta name="referrer" content="no-referrer" />
+    <title>TaskFlow — Manage your day, beautifully.</title>
+  </head>
+  <body class="bg-gradient-to-br from-indigo-50 via-white to-rose-50 min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
