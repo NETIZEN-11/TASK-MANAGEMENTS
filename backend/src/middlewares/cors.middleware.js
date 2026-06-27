@@ -1,10 +1,24 @@
 const cors = require('cors');
 const config = require('../config');
+const logger = require('../utils/logger');
 
 const DEV_PORT_PATTERN = /:(5173|5174|5175|4173)$/;
 const LOCALHOST = /^http:\/\/localhost(?::\d+)?$/;
 const LOOPBACK = /^http:\/\/127\.0\.0\.1(?::\d+)?$/;
 const VERCEL = /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/;
+
+/**
+ * Canonical trusted origins. These are added to the production allow-list
+ * UNCONDITIONALLY so a misconfigured env var (or a missing one) cannot
+ * lock out the live frontend.
+ *
+ * Add new deployment URLs here. The set is small on purpose — every entry
+ * is opt-in.
+ */
+const HARD_CODED_TRUSTED_ORIGINS = [
+  'https://task-managements-frontend-khaki.vercel.app',
+  'https://task-management-frontend-orcin-eta.vercel.app',
+];
 
 function isPrivateLanWithDevPort(origin) {
   const match = origin.match(/^http:\/\/([^/:]+)(?::(\d+))?/);
@@ -56,17 +70,43 @@ function buildProdAllowList() {
     .split(',')
     .map((s) => sanitizeOrigin(s.trim()))
     .filter(Boolean);
-  // Canonical defaults — keep in sync with current production deployments.
-  const defaults = [
-    config.clientOrigin,
-    // Current production frontend (Vercel).
-    'https://task-managements-frontend-khaki.vercel.app',
-    // Older canonical frontend — keep until the new one is stable.
-    'https://task-management-frontend-orcin-eta.vercel.app',
-  ]
-    .map(sanitizeOrigin)
-    .filter(Boolean);
-  return new Set([...defaults, ...fromEnv]);
+
+  // Log the inputs so a misconfigured env var is visible at startup.
+  const envRaw = process.env.ALLOWED_ORIGINS || '';
+  if (envRaw) {
+    logger.info(
+      `CORS: ALLOWED_ORIGINS env var parsed ${fromEnv.length} entr${
+        fromEnv.length === 1 ? 'y' : 'ies'
+      } from "${envRaw}"`
+    );
+  }
+
+  // Sanitize the configured client origin defensively. An empty/garbage
+  // value is dropped (it isn't added in a way that breaks the lookup),
+  // while the hard-coded list below guarantees the canonical deployments
+  // are always present.
+  const clientOriginSanitized = sanitizeOrigin(config.clientOrigin);
+  if (config.clientOrigin && !clientOriginSanitized) {
+    logger.warn(
+      `CORS: CLIENT_ORIGIN="${config.clientOrigin}" failed sanitization and was dropped from the allow-list`
+    );
+  }
+
+  const allowList = new Set([
+    ...HARD_CODED_TRUSTED_ORIGINS,
+    ...(clientOriginSanitized ? [clientOriginSanitized] : []),
+    ...fromEnv,
+  ]);
+
+  // Log the final allow-list at startup so a missing entry is visible in
+  // Render logs without having to trigger a real request.
+  if (config.isProduction) {
+    logger.info(
+      `CORS: production allow-list (${allowList.size}): ${[...allowList].join(', ')}`
+    );
+  }
+
+  return allowList;
 }
 
 /**
@@ -77,8 +117,10 @@ function buildProdAllowList() {
  */
 function sanitizeOrigin(input) {
   if (typeof input !== 'string') return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
   try {
-    const u = new URL(input);
+    const u = new URL(trimmed);
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
     if (!u.hostname) return null;
     if (u.pathname && u.pathname !== '/') return null;
@@ -118,7 +160,4 @@ module.exports = function corsMiddleware() {
 module.exports.isDevOrigin = isDevOrigin;
 module.exports.buildProdAllowList = buildProdAllowList;
 module.exports.sanitizeOrigin = sanitizeOrigin;
-module.exports.PROD_DEFAULT_ORIGINS = [
-  'https://task-managements-frontend-khaki.vercel.app',
-  'https://task-management-frontend-orcin-eta.vercel.app',
-];
+module.exports.HARD_CODED_TRUSTED_ORIGINS = HARD_CODED_TRUSTED_ORIGINS;
