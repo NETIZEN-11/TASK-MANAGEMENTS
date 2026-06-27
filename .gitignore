@@ -7,3 +7,6 @@ coverage
 logs
 *.log
 .DS_Store
+.git_old/
+.git_old
+build_git_history.js
