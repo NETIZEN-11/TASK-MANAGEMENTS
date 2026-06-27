@@ -44,13 +44,53 @@ function isDevOrigin(origin) {
  *    lead to cross-site token theft.
  *  - Development: localhost + 127.0.0.1 + LAN IPs on common dev ports are
  *    allowed. This is unsafe on public WiFi — disable with NODE_ENV=production.
+ *
+ * FIX: Extra trusted origins can be added at runtime via the
+ * `ALLOWED_ORIGINS` env var (comma-separated). This avoids redeploying the
+ * backend every time Vercel rotates the preview URL. The canonical Vercel
+ * deployments are still hard-coded as defaults so a fresh deploy works
+ * out of the box.
  */
+function buildProdAllowList() {
+  const fromEnv = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => sanitizeOrigin(s.trim()))
+    .filter(Boolean);
+  // Canonical defaults — keep in sync with current production deployments.
+  const defaults = [
+    config.clientOrigin,
+    // Current production frontend (Vercel).
+    'https://task-managements-frontend-khaki.vercel.app',
+    // Older canonical frontend — keep until the new one is stable.
+    'https://task-management-frontend-orcin-eta.vercel.app',
+  ]
+    .map(sanitizeOrigin)
+    .filter(Boolean);
+  return new Set([...defaults, ...fromEnv]);
+}
+
+/**
+ * Validate that a string looks like a plausible origin URL before trusting it
+ * in an env var. Catches typos like a trailing slash, a path, or whitespace.
+ * Reject anything that doesn't look like `scheme://host[:port]` so a stray
+ * `ALLOWED_ORIGINS=https://evil.com<script>` can't slip through.
+ */
+function sanitizeOrigin(input) {
+  if (typeof input !== 'string') return null;
+  try {
+    const u = new URL(input);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+    if (!u.hostname) return null;
+    if (u.pathname && u.pathname !== '/') return null;
+    if (u.search || u.hash) return null;
+    return u.origin;
+  } catch {
+    return null;
+  }
+}
+
 module.exports = function corsMiddleware() {
-  const PROD_ALLOWED = new Set(
-    [config.clientOrigin, 'https://task-management-frontend-orcin-eta.vercel.app'].filter(
-      Boolean
-    )
-  );
+  const PROD_ALLOWED = buildProdAllowList();
 
   return cors({
     origin: (origin, cb) => {
@@ -76,3 +116,9 @@ module.exports = function corsMiddleware() {
 };
 
 module.exports.isDevOrigin = isDevOrigin;
+module.exports.buildProdAllowList = buildProdAllowList;
+module.exports.sanitizeOrigin = sanitizeOrigin;
+module.exports.PROD_DEFAULT_ORIGINS = [
+  'https://task-managements-frontend-khaki.vercel.app',
+  'https://task-management-frontend-orcin-eta.vercel.app',
+];
