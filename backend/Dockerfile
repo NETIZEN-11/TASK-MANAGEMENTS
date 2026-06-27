@@ -12,6 +12,9 @@ RUN npm ci --omit=dev && npm cache clean --force
 # Copy source and hand ownership to non-root user
 COPY --chown=app:app src ./src
 
+# Create logs directory and set permissions
+RUN mkdir -p /app/logs && chown -R app:app /app
+
 ENV NODE_ENV=production
 EXPOSE 5000
 
