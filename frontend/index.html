@@ -2,24 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
   FIX BUG-M10: Removed 'unsafe-inline' from script-src — script-src is now 'self' only,
   which defends against stored XSS escalation. Vite emits nonced inline scripts in
   production builds so this still works for the entry chunk.
 
-  Vercel live feedback widget is excluded here (CSP is stricter than the widget
-  allows); enable it explicitly per environment if needed via build-time replacement.
+  FIX: Vercel Live feedback widget — its loader
+  (https://vercel.live/_next-live/feedback/feedback.js) is now allowed in
+  script-src, and its iframe target is allowed in frame-src. We use a
+  tightly-scoped host rather than a wildcard so a future subdomain takeover
+  on vercel.live can't escalate into script execution.
 
   NOTE: 'frame-ancestors' is intentionally NOT in this meta CSP — the CSP spec
   (https://www.w3.org/TR/CSP3/#meta-element) specifies that 'frame-ancestors' is
   IGNORED when delivered via <meta>. It is set on the backend via the
   helmet contentSecurityPolicy HTTP header instead, where it IS honored.
 
-  'connect-src' includes 'http:' so dev calls to http://localhost:5001 work.
+  'connect-src' includes 'http:' so dev calls to http://localhost:5001 work,
+  and 'https://vercel.live' so the feedback widget can post telemetry.
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' http: https: ws: wss:; font-src 'self' data: https:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://vercel.live; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: https://vercel.live; connect-src 'self' http: https: ws: wss: https://vercel.live; font-src 'self' data: https:; frame-src 'self' https://vercel.live; object-src 'none'; base-uri 'self'; form-action 'self';" />
     <meta name="referrer" content="no-referrer" />
     <title>TaskFlow — Manage your day, beautifully.</title>
   </head>

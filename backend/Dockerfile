@@ -1,5 +1,9 @@
 FROM node:20-alpine
 
+# Set timezone to UTC and install tzdata to prevent log clock skew
+RUN apk add --no-cache tzdata
+ENV TZ=UTC
+
 # Create a non-root user to run the app. Reduces blast radius of any RCE.
 RUN addgroup -S app && adduser -S app -G app
 
