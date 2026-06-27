@@ -25,6 +25,6 @@ EXPOSE 5000
 USER app
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=5 \
-  CMD wget -qO- http://localhost:5000/api/v1/health || exit 1
+  CMD sh -c "wget -qO- http://localhost:${PORT:-5000}/api/v1/health || exit 1"
 
 CMD ["node", "src/server.js"]

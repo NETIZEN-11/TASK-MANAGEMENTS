@@ -5,7 +5,11 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/
 
 const apiClient = axios.create({
   baseURL,
-  timeout: 15000,
+  // Render free tier cold-starts can take 30–60s. 15s caused spurious
+  // failures on the first request after idle. 45s is generous without
+  // feeling like a hang to the user (auth endpoints respond in <200ms
+  // once warm).
+  timeout: 45000,
   headers: { 'Content-Type': 'application/json' },
 });
 
